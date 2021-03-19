@@ -1,8 +1,11 @@
 set -e
 set -v
 
-# 1. pegasus-ensemble manager must be started first with 
-#   'pegasus-em server --verbose --debug'
+# 0. setup db
+pegasus-db-admin create
+
+# 1. pegasus-ensemble manager must be started
+pegasus-em server &
 
 # 2. creating an ensemble
 pegasus-em create myruns
