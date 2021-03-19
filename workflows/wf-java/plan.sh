@@ -5,7 +5,7 @@ set -v
 
 # build the dax generator
 export CLASSPATH=.:`pegasus-config --classpath`
-javac BlackDiamondDAX.java
+javac --release 8 BlackDiamondDAX.java
 
 # generate the dax
 java BlackDiamondDAX /usr blackdiamond.yml
@@ -33,4 +33,4 @@ cat >sites.xml <<EOF
 EOF
 
 # plan the workflow
-pegasus-plan --submit blackdiamond.yml
+pegasus-plan --output-sites local  blackdiamond.yml
