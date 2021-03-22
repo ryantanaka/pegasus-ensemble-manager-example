@@ -3,6 +3,9 @@
 set -e
 set -v
 
+TOP_DIR=$( cd "$(dirname "${BASH_SOURCE[0]}")"; pwd -P )
+cd $TOP_DIR
+
 # build the dax generator
 export CLASSPATH=.:`pegasus-config --classpath`
 javac --release 8 BlackDiamondDAX.java
@@ -33,4 +36,7 @@ cat >sites.xml <<EOF
 EOF
 
 # plan the workflow
-pegasus-plan --output-sites local  blackdiamond.yml
+pegasus-plan \
+	--output-sites local \
+	--conf pegasusrc \
+	blackdiamond.yml

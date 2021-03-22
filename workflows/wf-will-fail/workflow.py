@@ -10,6 +10,28 @@ logging.basicConfig(level=logging.INFO)
 WORK_DIR = Path.home() / "workflows"
 WORK_DIR.mkdir(exist_ok=True)
 
+TOP_DIR = Path(__file__).parent.resolve()
+
+# --- properties setup ---------------------------------------------------------
+props = Properties()
+props["pegasus.mode"] = "development"
+
+# specify abs path to catalogs
+sc_file = str(TOP_DIR / "sites.yml")
+rc_file = str(TOP_DIR / "rc.yml")
+tc_file = str(TOP_DIR / "transformations.yml")
+props_file = str(TOP_DIR / "pegasus.properties")
+
+props["pegasus.catalog.site.file"] = sc_file
+props["pegasus.catalog.replica.file"] = rc_file
+props["pegasus.catalog.transformation.file"] = tc_file
+props.write(props_file)
+
+# --- input files --------------------------------------------------------------
+rc = ReplicaCatalog()
+rc.add_replica(site="local", lfn="if.txt", pfn=TOP_DIR / "if.txt")
+rc.write(rc_file)
+
 # --- output dir setup ---------------------------------------------------------
 sc = SiteCatalog()
 # override default local site
@@ -22,16 +44,16 @@ local_shared_scratch = Directory(Directory.SHARED_SCRATCH, path=WORK_DIR / "scra
                             )
                         )
 
-local_local_storage = Directory(Directory.LOCAL_STORAGE, path=WORK_DIR / "outputs/workflow-1") \
+local_local_storage = Directory(Directory.LOCAL_STORAGE, path=WORK_DIR / "outputs/workflow-will-fail") \
                         .add_file_servers(FileServer(
-                                url="file://" + str(WORK_DIR / "outputs/workflow-1"),
+                                url="file://" + str(WORK_DIR / "outputs/workflow-will-fail"),
                                 operation_type=Operation.ALL
                             )
                         )
 
 local_site.add_directories(local_shared_scratch, local_local_storage)
 sc.add_sites(local_site)
-sc.write()
+sc.write(sc_file)
 
 # --- executables --------------------------------------------------------------
 tc = TransformationCatalog()
@@ -42,15 +64,19 @@ keg = Transformation(
         is_stageable=False
     )
 tc.add_transformations(keg)
-tc.write()
+tc.write(tc_file)
 
 # --- workflow -----------------------------------------------------------------
-wf = Workflow(name="workflow-1")
-j = Job(keg).add_args("-o", "out.txt", "-T", 20).add_outputs(File("out.txt"))
+wf = Workflow(name="workflow-will-fail")
+j = Job(keg)\
+        .add_args("-o", "out.txt", "-T", 1)\
+        .add_inputs(File("if.txt"))\
+        .add_outputs(File("out.txt"))
 wf.add_jobs(j)
+wf.write(str(TOP_DIR / "workflow.yml"))
 
 # REQUIRED: plan, but do not submit
-wf.plan()
+wf.plan(conf=props_file)
 
 
 
