@@ -3,12 +3,12 @@ echo "clearing ~/.workflow.db and creating a new one"
 rm -f ~/.pegasus/workflow.db
 pegasus-db-admin create
 
-# clearing files from previous runs
+# setup: clearing files from previous runs
 rm -f ~/.pegasus/ensembles/myruns/*.log \
     ~/.pegasus/ensembles/myruns/*.plan* \
     ./workflows/wf-will-fail/if.txt
 
-# 0. setup: increase interval at which ensemble manager processes runs
+# setup: increase interval at which ensemble manager processes runs
 #    configured in ~/.pegasus/service.py
 echo "EM_INTERVAL = 5" >> ~/.pegasus/service.py
 
@@ -40,7 +40,7 @@ echo "adding bad workflow to ensemble"
 pegasus-em submit myruns.wf-1-will-fail ./workflows/wf-will-fail/workflow.py
 
 # 6. add more workflows (generated using new python api)
-NUM_WORKFLOWS=5
+NUM_WORKFLOWS=2
 echo "generating $NUM_WORKFLOWS more workflow scripts"
 for i in $(seq 1 $NUM_WORKFLOWS); do
     mkdir -p workflows/wf-$i
@@ -64,12 +64,18 @@ echo "using pegasus-analyzer to see the output for myruns.wf-will-fail"
 pegasus-em analyze myruns.wf-1-will-fail
 
 # 10. fix failed workflow, and re-run
+echo "fixing failed workflow by adding missing input file; re-running from ensemble manager"
 echo "sample input" > workflows/wf-will-fail/if.txt
 pegasus-em rerun myruns.wf-1-will-fail
 
-# 11. observer failed workflow run to completion
-timeout --foreground 60 watch -n 1 pegasus-em workflows myruns
+# 11. observe failed workflow run to completion
+timeout --foreground 120 watch -n 1 pegasus-em workflows myruns
 
+# remove generated workflows
+ls workflows \
+    | grep -P "wf-[0-9]" \
+    | xargs -d "\n" printf -- "workflows/%s\n" \
+    | xargs -n1 rm -r
 
 # stop the pegasus-ensemble manager (typically, leave it on)
 kill $EM_PID
